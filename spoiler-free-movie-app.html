@@ -1,0 +1,492 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Spoiler-Free Entertainment Guide</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <style>
+        body {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+        }
+        .glass {
+            background: rgba(255, 255, 255, 0.95);
+            backdrop-filter: blur(10px);
+            box-shadow: 0 8px 32px 0 rgba(31, 38, 135, 0.37);
+        }
+        .loading {
+            border: 3px solid #f3f3f3;
+            border-top: 3px solid #667eea;
+            border-radius: 50%;
+            width: 40px;
+            height: 40px;
+            animation: spin 1s linear infinite;
+        }
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+    </style>
+</head>
+<body class="p-4 md:p-8">
+    <div class="max-w-4xl mx-auto">
+        <div class="glass rounded-2xl p-6 md:p-8 mb-6">
+            <h1 class="text-3xl md:text-4xl font-bold text-gray-800 mb-2">🎬 Spoiler-Free Entertainment Guide</h1>
+            <p class="text-gray-600 mb-6">Get plot summaries and cast info without spoilers</p>
+            
+            <!-- Tab Navigation -->
+            <div class="flex gap-2 mb-6 border-b-2 border-gray-200">
+                <button 
+                    onclick="switchTab('movie')" 
+                    id="movieTab"
+                    class="tab-button px-6 py-2 font-semibold transition border-b-4 border-purple-600 text-purple-600"
+                >
+                    Movies & TV Shows
+                </button>
+                <button 
+                    onclick="switchTab('actor')" 
+                    id="actorTab"
+                    class="tab-button px-6 py-2 font-semibold transition border-b-4 border-transparent text-gray-500 hover:text-gray-700"
+                >
+                    Actors
+                </button>
+            </div>
+            
+            <!-- Movie/TV Search -->
+            <div id="movieSearch">
+                <div class="flex gap-3">
+                    <input 
+                        type="text" 
+                        id="titleInput" 
+                        placeholder="Enter movie or TV show title..."
+                        class="flex-1 px-4 py-3 border-2 border-gray-300 rounded-lg focus:outline-none focus:border-purple-500 transition"
+                    />
+                    <button 
+                        onclick="getInfo()" 
+                        id="searchBtn"
+                        class="bg-gradient-to-r from-purple-600 to-indigo-600 text-white px-8 py-3 rounded-lg font-semibold hover:from-purple-700 hover:to-indigo-700 transition transform hover:scale-105"
+                    >
+                        Get Info
+                    </button>
+                </div>
+            </div>
+            
+            <!-- Actor Search -->
+            <div id="actorSearch" class="hidden">
+                <div class="flex gap-3">
+                    <input 
+                        type="text" 
+                        id="actorInput" 
+                        placeholder="Enter actor name..."
+                        class="flex-1 px-4 py-3 border-2 border-gray-300 rounded-lg focus:outline-none focus:border-purple-500 transition"
+                    />
+                    <button 
+                        onclick="getActorInfo()" 
+                        id="actorSearchBtn"
+                        class="bg-gradient-to-r from-purple-600 to-indigo-600 text-white px-8 py-3 rounded-lg font-semibold hover:from-purple-700 hover:to-indigo-700 transition transform hover:scale-105"
+                    >
+                        Get Info
+                    </button>
+                </div>
+            </div>
+        </div>
+
+        <div id="loading" class="hidden glass rounded-2xl p-8 text-center">
+            <div class="loading mx-auto mb-4"></div>
+            <p class="text-gray-600">Gathering information...</p>
+        </div>
+
+        <div id="results" class="hidden glass rounded-2xl p-6 md:p-8">
+            <h2 id="showTitle" class="text-2xl md:text-3xl font-bold text-gray-800 mb-2"></h2>
+            <a id="imdbLink" href="#" target="_blank" class="inline-flex items-center text-purple-600 hover:text-purple-800 font-semibold mb-6">
+                View on IMDb →
+            </a>
+            
+            <div class="mb-6">
+                <h3 class="text-xl font-semibold text-purple-700 mb-3">⭐ Ratings</h3>
+                <div id="ratings" class="grid grid-cols-2 md:grid-cols-4 gap-3"></div>
+            </div>
+
+            <div class="mb-6">
+                <h3 class="text-xl font-semibold text-purple-700 mb-3">📖 Spoiler-Free Summary</h3>
+                <p id="summary" class="text-gray-700 leading-relaxed"></p>
+            </div>
+
+            <div class="mb-6">
+                <h3 class="text-xl font-semibold text-purple-700 mb-3">🎭 Main Cast</h3>
+                <div id="cast" class="space-y-3"></div>
+            </div>
+
+            <div id="hispanicSection" class="hidden">
+                <h3 class="text-xl font-semibold text-purple-700 mb-3">🌎 Hispanic/Latino Actor Details</h3>
+                <div id="hispanicActors" class="space-y-4"></div>
+            </div>
+        </div>
+
+        <div id="error" class="hidden glass rounded-2xl p-6 bg-red-50 border-2 border-red-200">
+            <p class="text-red-700"></p>
+        </div>
+
+        <!-- Actor Results -->
+        <div id="actorResults" class="hidden glass rounded-2xl p-6 md:p-8">
+            <h2 id="actorName" class="text-2xl md:text-3xl font-bold text-gray-800 mb-2"></h2>
+            <a id="actorImdbLink" href="#" target="_blank" class="inline-flex items-center text-purple-600 hover:text-purple-800 font-semibold mb-6">
+                View on IMDb →
+            </a>
+
+            <div class="mb-6">
+                <h3 class="text-xl font-semibold text-purple-700 mb-3">👤 Biography</h3>
+                <p id="actorBio" class="text-gray-700 leading-relaxed"></p>
+            </div>
+
+            <div id="hispanicInfoSection" class="hidden mb-6">
+                <h3 class="text-xl font-semibold text-purple-700 mb-3">🌎 Background</h3>
+                <div class="bg-gradient-to-r from-orange-50 to-yellow-50 p-4 rounded-lg border border-orange-200">
+                    <p id="actorBirthplace" class="text-gray-700 text-sm mb-2"></p>
+                    <p id="actorParentsOrigin" class="text-gray-700 text-sm"></p>
+                </div>
+            </div>
+
+            <div class="mb-6">
+                <h3 class="text-xl font-semibold text-purple-700 mb-3">🎬 Top Roles</h3>
+                <div id="topRoles" class="space-y-3"></div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        let currentTab = 'movie';
+
+        function switchTab(tab) {
+            currentTab = tab;
+            
+            // Update tab buttons
+            const movieTab = document.getElementById('movieTab');
+            const actorTab = document.getElementById('actorTab');
+            
+            if (tab === 'movie') {
+                movieTab.className = 'tab-button px-6 py-2 font-semibold transition border-b-4 border-purple-600 text-purple-600';
+                actorTab.className = 'tab-button px-6 py-2 font-semibold transition border-b-4 border-transparent text-gray-500 hover:text-gray-700';
+                document.getElementById('movieSearch').classList.remove('hidden');
+                document.getElementById('actorSearch').classList.add('hidden');
+            } else {
+                actorTab.className = 'tab-button px-6 py-2 font-semibold transition border-b-4 border-purple-600 text-purple-600';
+                movieTab.className = 'tab-button px-6 py-2 font-semibold transition border-b-4 border-transparent text-gray-500 hover:text-gray-700';
+                document.getElementById('actorSearch').classList.remove('hidden');
+                document.getElementById('movieSearch').classList.add('hidden');
+            }
+            
+            // Hide all result sections
+            document.getElementById('results').classList.add('hidden');
+            document.getElementById('actorResults').classList.add('hidden');
+            document.getElementById('loading').classList.add('hidden');
+            document.getElementById('error').classList.add('hidden');
+        }
+
+        document.getElementById('titleInput').addEventListener('keypress', function(e) {
+            if (e.key === 'Enter') getInfo();
+        });
+
+        document.getElementById('actorInput').addEventListener('keypress', function(e) {
+            if (e.key === 'Enter') getActorInfo();
+        });
+
+        async function getInfo() {
+            const title = document.getElementById('titleInput').value.trim();
+            if (!title) return;
+
+            document.getElementById('loading').classList.remove('hidden');
+            document.getElementById('results').classList.add('hidden');
+            document.getElementById('error').classList.add('hidden');
+            document.getElementById('searchBtn').disabled = true;
+
+            try {
+                const response = await fetch('https://api.anthropic.com/v1/messages', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                    },
+                    body: JSON.stringify({
+                        model: 'claude-sonnet-4-20250514',
+                        max_tokens: 1000,
+                        messages: [{
+                            role: 'user',
+                            content: `Provide information about "${title}" in the following JSON format. Be SPOILER-FREE (no plot twists, endings, or major reveals - only the basic premise). Respond ONLY with valid JSON, no markdown or preamble:
+
+{
+  "title": "Official title",
+  "imdbId": "tt1234567 (IMDb ID)",
+  "summary": "Spoiler-free 2-3 sentence premise only",
+  "ratings": {
+    "imdb": "X.X/10 or null if unavailable",
+    "rottenTomatoes": "XX% or null if unavailable",
+    "metacritic": "XX/100 or null if unavailable",
+    "letterboxd": "X.X/5 or null if unavailable"
+  },
+  "cast": [
+    {
+      "character": "Character name",
+      "actor": "Actor name",
+      "imdbId": "nm1234567 (actor's IMDb ID)",
+      "isHispanic": true/false,
+      "birthplace": "City, Country (only if Hispanic/Latino)",
+      "parentsOrigin": "Country of parents' origin (only if Hispanic/Latino)"
+    }
+  ]
+}
+
+Include only main cast (top 5-6 characters). For Hispanic/Latino actors, include birthplace and parents' country of origin. If you cannot find the title or it doesn't exist, return null for all fields.`
+                        }]
+                    })
+                });
+
+                const data = await response.json();
+                const text = data.content.find(item => item.type === 'text')?.text || '';
+                const cleanText = text.replace(/```json|```/g, '').trim();
+                const info = JSON.parse(cleanText);
+
+                displayResults(info, title);
+            } catch (error) {
+                showError(title);
+            } finally {
+                document.getElementById('loading').classList.add('hidden');
+                document.getElementById('searchBtn').disabled = false;
+            }
+        }
+
+        function displayResults(info, searchTitle) {
+            if (!info || !info.title) {
+                showError(searchTitle);
+                return;
+            }
+
+            document.getElementById('showTitle').textContent = info.title;
+            
+            // Set IMDb link for title
+            const imdbLink = document.getElementById('imdbLink');
+            if (info.imdbId) {
+                imdbLink.href = `https://www.imdb.com/title/${info.imdbId}/`;
+                imdbLink.classList.remove('hidden');
+            } else {
+                imdbLink.classList.add('hidden');
+            }
+            
+            document.getElementById('summary').textContent = info.summary;
+
+            // Display ratings
+            const ratingsDiv = document.getElementById('ratings');
+            ratingsDiv.innerHTML = '';
+            
+            const ratingsSources = [
+                { name: 'IMDb', key: 'imdb', icon: '🎬' },
+                { name: 'Rotten Tomatoes', key: 'rottenTomatoes', icon: '🍅' },
+                { name: 'Metacritic', key: 'metacritic', icon: '📊' },
+                { name: 'Letterboxd', key: 'letterboxd', icon: '📽️' }
+            ];
+
+            ratingsSources.forEach(source => {
+                const rating = info.ratings?.[source.key];
+                if (rating && rating !== 'null') {
+                    const ratingCard = document.createElement('div');
+                    ratingCard.className = 'bg-gradient-to-br from-purple-50 to-indigo-50 p-3 rounded-lg text-center border border-purple-200';
+                    ratingCard.innerHTML = `
+                        <div class="text-2xl mb-1">${source.icon}</div>
+                        <div class="text-sm text-gray-600 mb-1">${source.name}</div>
+                        <div class="text-lg font-bold text-purple-700">${rating}</div>
+                    `;
+                    ratingsDiv.appendChild(ratingCard);
+                }
+            });
+
+            const castDiv = document.getElementById('cast');
+            castDiv.innerHTML = '';
+            
+            if (!info.cast || info.cast.length === 0) {
+                castDiv.innerHTML = '<p class="text-gray-500 italic">Cast information not available</p>';
+            } else {
+                const hispanicActors = info.cast.filter(c => c.isHispanic);
+                
+                info.cast.forEach(member => {
+                    const castItem = document.createElement('div');
+                    castItem.className = 'bg-gray-50 p-3 rounded-lg';
+                    
+                    let actorHtml = `<span class="font-semibold text-purple-600">${member.actor}</span>`;
+                    if (member.imdbId) {
+                        actorHtml = `<a href="https://www.imdb.com/name/${member.imdbId}/" target="_blank" class="font-semibold text-purple-600 hover:text-purple-800 hover:underline">${member.actor}</a>`;
+                    }
+                    
+                    castItem.innerHTML = `
+                        <span class="font-semibold text-gray-800">${member.character}</span>
+                        <span class="text-gray-600"> played by </span>
+                        ${actorHtml}
+                    `;
+                    castDiv.appendChild(castItem);
+                });
+
+                if (hispanicActors.length > 0) {
+                    document.getElementById('hispanicSection').classList.remove('hidden');
+                    const hispanicDiv = document.getElementById('hispanicActors');
+                    hispanicDiv.innerHTML = '';
+
+                    hispanicActors.forEach(actor => {
+                        const actorCard = document.createElement('div');
+                        actorCard.className = 'bg-gradient-to-r from-orange-50 to-yellow-50 p-4 rounded-lg border border-orange-200';
+                        
+                        let actorNameHtml = `<p class="font-bold text-gray-800 mb-2">${actor.actor}</p>`;
+                        if (actor.imdbId) {
+                            actorNameHtml = `<p class="font-bold mb-2"><a href="https://www.imdb.com/name/${actor.imdbId}/" target="_blank" class="text-purple-700 hover:text-purple-900 hover:underline">${actor.actor}</a></p>`;
+                        }
+                        
+                        actorCard.innerHTML = `
+                            ${actorNameHtml}
+                            <p class="text-gray-700 text-sm"><span class="font-semibold">Birthplace:</span> ${actor.birthplace}</p>
+                            <p class="text-gray-700 text-sm"><span class="font-semibold">Parents' Origin:</span> ${actor.parentsOrigin}</p>
+                        `;
+                        hispanicDiv.appendChild(actorCard);
+                    });
+                } else {
+                    document.getElementById('hispanicSection').classList.add('hidden');
+                }
+            }
+
+            document.getElementById('results').classList.remove('hidden');
+        }
+
+        function showError(searchTitle) {
+            const imdbSearchUrl = `https://www.imdb.com/find/?q=${encodeURIComponent(searchTitle)}`;
+            document.getElementById('error').classList.remove('hidden');
+            document.getElementById('error').querySelector('p').innerHTML = 
+                `Could not find information for "${searchTitle}". <a href="${imdbSearchUrl}" target="_blank" class="font-semibold text-purple-600 hover:text-purple-800 hover:underline">Search on IMDb →</a>`;
+        }
+
+        async function getActorInfo() {
+            const actorName = document.getElementById('actorInput').value.trim();
+            if (!actorName) return;
+
+            document.getElementById('loading').classList.remove('hidden');
+            document.getElementById('actorResults').classList.add('hidden');
+            document.getElementById('results').classList.add('hidden');
+            document.getElementById('error').classList.add('hidden');
+            document.getElementById('actorSearchBtn').disabled = true;
+
+            try {
+                const response = await fetch('https://api.anthropic.com/v1/messages', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                    },
+                    body: JSON.stringify({
+                        model: 'claude-sonnet-4-20250514',
+                        max_tokens: 1000,
+                        messages: [{
+                            role: 'user',
+                            content: `Provide information about the actor "${actorName}" in the following JSON format. Respond ONLY with valid JSON, no markdown or preamble:
+
+{
+  "name": "Actor's full name",
+  "imdbId": "nm1234567 (IMDb ID)",
+  "biography": "2-3 sentence biography covering their career highlights and background",
+  "isHispanic": true/false,
+  "birthplace": "City, Country (only if Hispanic/Latino)",
+  "parentsOrigin": "Country of parents' origin (only if Hispanic/Latino)",
+  "topRoles": [
+    {
+      "title": "Movie/TV show title",
+      "character": "Character name",
+      "year": "YYYY",
+      "imdbId": "tt1234567 (title's IMDb ID)"
+    }
+  ]
+}
+
+Include 5-8 of their most notable or popular roles. If you cannot find this actor or they don't exist, return null for all fields.`
+                        }]
+                    })
+                });
+
+                const data = await response.json();
+                const text = data.content.find(item => item.type === 'text')?.text || '';
+                const cleanText = text.replace(/```json|```/g, '').trim();
+                const info = JSON.parse(cleanText);
+
+                displayActorResults(info, actorName);
+            } catch (error) {
+                showActorError(actorName);
+            } finally {
+                document.getElementById('loading').classList.add('hidden');
+                document.getElementById('actorSearchBtn').disabled = false;
+            }
+        }
+
+        function displayActorResults(info, searchName) {
+            if (!info || !info.name) {
+                showActorError(searchName);
+                return;
+            }
+
+            document.getElementById('actorName').textContent = info.name;
+            
+            // Set IMDb link for actor
+            const actorImdbLink = document.getElementById('actorImdbLink');
+            if (info.imdbId) {
+                actorImdbLink.href = `https://www.imdb.com/name/${info.imdbId}/`;
+                actorImdbLink.classList.remove('hidden');
+            } else {
+                actorImdbLink.classList.add('hidden');
+            }
+            
+            document.getElementById('actorBio').textContent = info.biography;
+
+            // Show Hispanic/Latino info if applicable
+            if (info.isHispanic && info.birthplace && info.parentsOrigin) {
+                document.getElementById('hispanicInfoSection').classList.remove('hidden');
+                document.getElementById('actorBirthplace').innerHTML = 
+                    `<span class="font-semibold">Birthplace:</span> ${info.birthplace}`;
+                document.getElementById('actorParentsOrigin').innerHTML = 
+                    `<span class="font-semibold">Parents' Origin:</span> ${info.parentsOrigin}`;
+            } else {
+                document.getElementById('hispanicInfoSection').classList.add('hidden');
+            }
+
+            // Display top roles
+            const rolesDiv = document.getElementById('topRoles');
+            rolesDiv.innerHTML = '';
+            
+            if (!info.topRoles || info.topRoles.length === 0) {
+                rolesDiv.innerHTML = '<p class="text-gray-500 italic">Role information not available</p>';
+            } else {
+                info.topRoles.forEach(role => {
+                    const roleCard = document.createElement('div');
+                    roleCard.className = 'bg-gray-50 p-4 rounded-lg';
+                    
+                    let titleHtml = `<span class="font-semibold text-gray-800">${role.title}</span>`;
+                    if (role.imdbId) {
+                        titleHtml = `<a href="https://www.imdb.com/title/${role.imdbId}/" target="_blank" class="font-semibold text-purple-600 hover:text-purple-800 hover:underline">${role.title}</a>`;
+                    }
+                    
+                    roleCard.innerHTML = `
+                        <div class="flex justify-between items-start">
+                            <div>
+                                ${titleHtml}
+                                <p class="text-gray-600 text-sm mt-1">as <span class="font-medium">${role.character}</span></p>
+                            </div>
+                            <span class="text-gray-500 text-sm">${role.year}</span>
+                        </div>
+                    `;
+                    rolesDiv.appendChild(roleCard);
+                });
+            }
+
+            document.getElementById('actorResults').classList.remove('hidden');
+        }
+
+        function showActorError(searchName) {
+            const imdbSearchUrl = `https://www.imdb.com/find/?q=${encodeURIComponent(searchName)}`;
+            document.getElementById('error').classList.remove('hidden');
+            document.getElementById('error').querySelector('p').innerHTML = 
+                `Could not find information for "${searchName}". <a href="${imdbSearchUrl}" target="_blank" class="font-semibold text-purple-600 hover:text-purple-800 hover:underline">Search on IMDb →</a>`;
+        }
+    </script>
+</body>
+</html>
